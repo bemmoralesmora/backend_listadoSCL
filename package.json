@@ -1,0 +1,25 @@
+{
+  "name": "backend_listadoscl",
+  "version": "1.0.0",
+  "description": "sencillo",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bemmoralesmora/backend_listadoSCL.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bemmoralesmora/backend_listadoSCL/issues"
+  },
+  "homepage": "https://github.com/bemmoralesmora/backend_listadoSCL#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "mysql2": "^3.14.0"
+  }
+}
