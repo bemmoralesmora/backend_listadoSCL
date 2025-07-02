@@ -17,10 +17,11 @@ app.use(express.urlencoded({ extended: false }));
 
 // Conexión a MySQL (versión simplificada)
 const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "coldwinter.123",
-  database: "list_scl", // Asume que la DB ya existe
+  host: "b9samry19yq5e4x35vfy-mysql.services.clever-cloud.com",
+  user: "ukqfgworavi3hxdt",
+  password: "t6FDMvdbFqO7WPA2q6SC",
+  database: "b9samry19yq5e4x35vfy",
+  port: 3306, // cámbialo si Clever Cloud te indica otro
 });
 
 db.connect((err) => {
@@ -453,9 +454,83 @@ app.get("/alumnos/:id/asistencia", (req, res) => {
   });
 });
 
-// ==================== RUTAS PARA ASISTENCIA ====================
+// ==================== RUTAS PARA UNIFORME ====================
 
-// GET /asistencia/grado/:id_grado - Obtiene asistencia por grado y fecha
+// POST /uniforme - Guardar datos del uniforme
+app.post("/uniforme", async (req, res) => {
+  const {
+    id_asistencia,
+    zapatos,
+    playera,
+    pantalon,
+    sueter,
+    corte_pelo,
+    observacion,
+  } = req.body;
+
+  if (!id_asistencia) {
+    return res.status(400).json({ error: "ID de asistencia es requerido" });
+  }
+
+  try {
+    const query = `
+      INSERT INTO Uniforme 
+        (id_asistencia, zapatos, playera, pantalon, sueter, corte_pelo, observacion)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        zapatos = VALUES(zapatos),
+        playera = VALUES(playera),
+        pantalon = VALUES(pantalon),
+        sueter = VALUES(sueter),
+        corte_pelo = VALUES(corte_pelo),
+        observacion = VALUES(observacion)
+    `;
+
+    db.query(
+      query,
+      [
+        id_asistencia,
+        zapatos,
+        playera,
+        pantalon,
+        sueter,
+        corte_pelo,
+        observacion,
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("Error al guardar uniforme:", err);
+          return res.status(500).json({ error: "Error al guardar uniforme" });
+        }
+        res.json({ success: true, message: "Uniforme guardado correctamente" });
+      }
+    );
+  } catch (error) {
+    console.error("Error en ruta /uniforme:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+// GET /uniforme/:id_asistencia - Obtener datos del uniforme
+app.get("/uniforme/:id_asistencia", (req, res) => {
+  const { id_asistencia } = req.params;
+
+  db.query(
+    "SELECT * FROM Uniforme WHERE id_asistencia = ?",
+    [id_asistencia],
+    (err, results) => {
+      if (err) {
+        console.error("Error al obtener uniforme:", err);
+        return res.status(500).json({ error: "Error al obtener uniforme" });
+      }
+      res.json(results[0] || null);
+    }
+  );
+});
+
+// ==================== RUTAS MODIFICADAS PARA ASISTENCIA ====================
+
+// Modificamos la ruta GET /asistencia/grado/:id_grado para incluir uniforme
 app.get("/asistencia/grado/:id_grado", (req, res) => {
   const { id_grado } = req.params;
   const { fecha } = req.query;
@@ -464,23 +539,24 @@ app.get("/asistencia/grado/:id_grado", (req, res) => {
     return res.status(400).json({ error: "Parámetro fecha es requerido" });
   }
 
-  // Consulta optimizada que trae alumnos del grado con su estado de asistencia si existe
   const query = `
-        SELECT 
-            a.id_alumno, 
-            a.nombre, 
-            a.apellido, 
-            g.nombre_grado,
-            ? as fecha,
-            IFNULL(asis.estado, 'ausente') as estado,
-            IFNULL(asis.comentario, '') as comentario,
-            IFNULL(asis.id_asistencia, NULL) as id_asistencia
-        FROM Alumnos a
-        JOIN Grados g ON a.id_grado = g.id_grado
-        LEFT JOIN Asistencia asis ON a.id_alumno = asis.id_alumno AND asis.fecha = ?
-        WHERE a.id_grado = ?
-        ORDER BY a.apellido, a.nombre
-    `;
+    SELECT 
+      a.id_alumno, 
+      a.nombre, 
+      a.apellido, 
+      g.nombre_grado,
+      ? as fecha,
+      IFNULL(asis.estado, 'ausente') as estado,
+      IFNULL(asis.comentario, '') as comentario,
+      IFNULL(asis.id_asistencia, NULL) as id_asistencia,
+      u.zapatos, u.playera, u.pantalon, u.sueter, u.corte_pelo, u.observacion
+    FROM Alumnos a
+    JOIN Grados g ON a.id_grado = g.id_grado
+    LEFT JOIN Asistencia asis ON a.id_alumno = asis.id_alumno AND asis.fecha = ?
+    LEFT JOIN Uniforme u ON asis.id_asistencia = u.id_asistencia
+    WHERE a.id_grado = ?
+    ORDER BY a.apellido, a.nombre
+  `;
 
   db.query(query, [fecha, fecha, id_grado], (err, results) => {
     if (err) {
@@ -615,6 +691,88 @@ app.put("/asistencia/update-multiple", (req, res) => {
       console.error("Error al actualizar asistencias:", error);
       res.status(500).json({ error: "Error al actualizar asistencias" });
     });
+});
+
+app.get("/asistencia/grado/:nombre_grado", (req, res) => {
+  const { nombre_grado } = req.params;
+  const { fecha } = req.query;
+
+  if (!fecha) {
+    return res.status(400).json({ error: "Parámetro fecha es requerido" });
+  }
+
+  const query = `
+    SELECT 
+      a.id_alumno, 
+      a.nombre, 
+      a.apellido, 
+      g.nombre_grado,
+      asis.fecha,
+      IFNULL(asis.estado, 'ausente') as estado,
+      IFNULL(asis.comentario, '') as comentario,
+      asis.id_asistencia,
+      u.zapatos, 
+      u.playera, 
+      u.pantalon, 
+      u.sueter, 
+      u.corte_pelo, 
+      u.observacion
+    FROM Alumnos a
+    JOIN Grados g ON a.id_grado = g.id_grado
+    LEFT JOIN Asistencia asis ON a.id_alumno = asis.id_alumno AND asis.fecha = ?
+    LEFT JOIN Uniforme u ON asis.id_asistencia = u.id_asistencia
+    WHERE g.nombre_grado = ?
+    ORDER BY a.apellido, a.nombre
+  `;
+
+  db.query(query, [fecha, nombre_grado], (err, results) => {
+    if (err) {
+      console.error("Error en consulta de asistencia:", err);
+      return res.status(500).json({ error: "Error al obtener asistencia" });
+    }
+    res.json(results);
+  });
+});
+
+// En backend.js - Ruta POST /asistencia/batch
+app.post("/asistencia/batch", async (req, res) => {
+  try {
+    const { asistencias } = req.body;
+    console.log("Datos recibidos:", asistencias); // ← Añade esto para depuración
+
+    // ... resto del código ...
+
+    // Dentro del map de asistencias:
+    if (asistencia.uniforme) {
+      console.log("Uniforme a guardar:", asistencia.uniforme); // ← Depuración
+      await db.query(
+        `INSERT INTO Uniforme 
+         (id_asistencia, zapatos, playera, pantalon, sueter, corte_pelo, observacion)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           zapatos=VALUES(zapatos), playera=VALUES(playera), pantalon=VALUES(pantalon),
+           sueter=VALUES(sueter), corte_pelo=VALUES(corte_pelo), observacion=VALUES(observacion)`,
+        [
+          idAsistencia,
+          asistencia.uniforme.zapatos || 0,
+          asistencia.uniforme.playera || 0,
+          asistencia.uniforme.pantalon || 0,
+          asistencia.uniforme.sueter || 0,
+          asistencia.uniforme.corte_pelo || 0,
+          asistencia.uniforme.observacion || "",
+        ]
+      );
+    }
+
+    // ... resto del código ...
+  } catch (error) {
+    console.error("Error completo:", error); // ← Mejor logging de errores
+    res.status(500).json({
+      error: "Error al guardar",
+      details: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    });
+  }
 });
 
 // ==================== MEJORAS A RUTAS EXISTENTES ====================
