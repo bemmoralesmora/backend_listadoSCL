@@ -3,6 +3,7 @@ const mysql = require("mysql");
 const cors = require("cors");
 
 const app = express();
+app.use(express.json());
 
 // Configuración básica
 const allowedOrigins = [
@@ -29,20 +30,23 @@ app.use(
 );
 
 // Conexión a MySQL (versión simplificada)
-const db = mysql.createConnection({
+const pool = mysql.createPool({
   host: "b9samry19yq5e4x35vfy-mysql.services.clever-cloud.com",
   user: "ukqfgworavi3hxdt",
   password: "t6FDMvdbFqO7WPA2q6SC",
   database: "b9samry19yq5e4x35vfy",
-  port: 3306, // cámbialo si Clever Cloud te indica otro
+  port: 3306,
+  connectionLimit: 10, // cantidad máxima de conexiones simultáneas
 });
 
-db.connect((err) => {
+// Probar conexión al iniciar
+pool.getConnection((err, connection) => {
   if (err) {
-    console.error("Error de conexión a MySQL:", err);
-    process.exit(1); // Termina la aplicación si no puede conectar
+    console.error("Error al conectar con el pool de MySQL:", err);
+    process.exit(1);
   }
-  console.log("Conectado a MySQL");
+  console.log("Conectado a MySQL (con pool)");
+  connection.release(); // liberar la conexión al pool
 });
 
 // Ruta básica de salud
@@ -871,9 +875,10 @@ app.get("/asistencia/buscar", async (req, res) => {
 });
 
 // Configuración del puerto
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+  console.log(`Servidor escuchando en puerto ${PORT}`);
 });
 
 module.exports = app;
