@@ -33,7 +33,7 @@ app.use(
 const pool = mysql.createPool({
   host: "b9samry19yq5e4x35vfy-mysql.services.clever-cloud.com",
   user: "ukqfgworavi3hxdt",
-  password: "t6FDMvdbFqO7WPA2q6SC",
+  password: "t6FDMvpoolFqO7WPA2q6SC",
   database: "b9samry19yq5e4x35vfy",
   port: 3306,
   connectionLimit: 10, // cantidad máxima de conexiones simultáneas
@@ -63,7 +63,7 @@ app.get("/profesores", (req, res) => {
         FROM Profesores p
         LEFT JOIN Grados g ON p.id_grado_asignado = g.id_grado
     `;
-  db.query(query, (err, results) => {
+  pool.query(query, (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -79,7 +79,7 @@ app.post("/profesores", (req, res) => {
   if (id_grado_asignado) {
     const checkGradoQuery = "SELECT id_grado FROM Grados WHERE id_grado = ?";
 
-    db.query(checkGradoQuery, [id_grado_asignado], (err, gradoResults) => {
+    pool.query(checkGradoQuery, [id_grado_asignado], (err, gradoResults) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
@@ -97,7 +97,7 @@ app.post("/profesores", (req, res) => {
 
   function insertProfesor() {
     const query = "INSERT INTO Profesores SET ?";
-    db.query(
+    pool.query(
       query,
       { nombre, apellido, email, contraseña, id_grado_asignado },
       (err, result) => {
@@ -120,7 +120,7 @@ app.get("/profesores/:id", (req, res) => {
         WHERE p.id_profesor = ?
     `;
 
-  db.query(query, [id], (err, results) => {
+  pool.query(query, [id], (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -139,7 +139,7 @@ app.get("/profesores/:id/alumnos", (req, res) => {
   const getGradoQuery =
     "SELECT id_grado_asignado FROM Profesores WHERE id_profesor = ?";
 
-  db.query(getGradoQuery, [id], (err, profesorResults) => {
+  pool.query(getGradoQuery, [id], (err, profesorResults) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -163,7 +163,7 @@ app.get("/profesores/:id/alumnos", (req, res) => {
             WHERE a.id_grado = ?
         `;
 
-    db.query(getAlumnosQuery, [id_grado], (err, alumnosResults) => {
+    pool.query(getAlumnosQuery, [id_grado], (err, alumnosResults) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
@@ -184,7 +184,7 @@ app.put("/profesores/:id/grado", (req, res) => {
   // Verificar que el grado exista
   const checkGradoQuery = "SELECT id_grado FROM Grados WHERE id_grado = ?";
 
-  db.query(checkGradoQuery, [id_grado_asignado], (err, gradoResults) => {
+  pool.query(checkGradoQuery, [id_grado_asignado], (err, gradoResults) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -196,7 +196,7 @@ app.put("/profesores/:id/grado", (req, res) => {
     const updateQuery =
       "UPDATE Profesores SET id_grado_asignado = ? WHERE id_profesor = ?";
 
-    db.query(updateQuery, [id_grado_asignado, id], (err, result) => {
+    pool.query(updateQuery, [id_grado_asignado, id], (err, result) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
@@ -229,7 +229,7 @@ app.post("/login-profesor", (req, res) => {
         WHERE p.email = ?
     `;
 
-  db.query(query, [email], (err, results) => {
+  pool.query(query, [email], (err, results) => {
     if (err) {
       console.error("Error en consulta SQL:", err);
       return res.status(500).json({
@@ -286,7 +286,7 @@ app.get("/grados", (req, res) => {
             END,
             g.nombre_grado
     `;
-  db.query(query, (err, results) => {
+  pool.query(query, (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -299,7 +299,7 @@ app.get("/grados/exacto/:nombre", (req, res) => {
   const { nombre } = req.params;
   const query = "SELECT * FROM Grados WHERE nombre_grado = ? LIMIT 1";
 
-  db.query(query, [nombre], (err, results) => {
+  pool.query(query, [nombre], (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -322,7 +322,7 @@ app.post("/grados", (req, res) => {
 
   // Usar INSERT IGNORE para evitar errores de duplicados
   const query = "INSERT IGNORE INTO Grados SET ?";
-  db.query(query, { nombre_grado, nivel }, (err, result) => {
+  pool.query(query, { nombre_grado, nivel }, (err, result) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -348,7 +348,7 @@ app.get("/grados/:id/alumnos", (req, res) => {
         JOIN Grados g ON a.id_grado = g.id_grado
         WHERE a.id_grado = ?
     `;
-  db.query(query, [id], (err, results) => {
+  pool.query(query, [id], (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -361,7 +361,7 @@ app.get("/grados/:id/profesores", (req, res) => {
   const { id } = req.params;
   const query = "SELECT * FROM Profesores WHERE id_grado_asignado = ?";
 
-  db.query(query, [id], (err, results) => {
+  pool.query(query, [id], (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -378,7 +378,7 @@ app.get("/alumnos", (req, res) => {
         FROM Alumnos a
         LEFT JOIN Grados g ON a.id_grado = g.id_grado
     `;
-  db.query(query, (err, results) => {
+  pool.query(query, (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -399,7 +399,7 @@ app.post("/alumnos", (req, res) => {
   // Primero encontrar el ID del grado
   const findGradoQuery = "SELECT id_grado FROM Grados WHERE nombre_grado = ?";
 
-  db.query(findGradoQuery, [grado], (err, gradoResults) => {
+  pool.query(findGradoQuery, [grado], (err, gradoResults) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -414,7 +414,7 @@ app.post("/alumnos", (req, res) => {
     const insertQuery =
       "INSERT INTO Alumnos (nombre, apellido, id_grado) VALUES (?, ?, ?)";
 
-    db.query(insertQuery, [nombre, apellido, id_grado], (err, result) => {
+    pool.query(insertQuery, [nombre, apellido, id_grado], (err, result) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
@@ -427,7 +427,7 @@ app.post("/alumnos", (req, res) => {
                 WHERE a.id_alumno = ?
             `;
 
-      db.query(getAlumnoQuery, [result.insertId], (err, alumnoResults) => {
+      pool.query(getAlumnoQuery, [result.insertId], (err, alumnoResults) => {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
@@ -447,7 +447,7 @@ app.get("/alumnos/:id", (req, res) => {
         LEFT JOIN Grados g ON a.id_grado = g.id_grado
         WHERE a.id_alumno = ?
     `;
-  db.query(query, [id], (err, results) => {
+  pool.query(query, [id], (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -463,7 +463,7 @@ app.get("/alumnos/:id/asistencia", (req, res) => {
   const { id } = req.params;
   const query =
     "SELECT * FROM Asistencia WHERE id_alumno = ? ORDER BY fecha DESC";
-  db.query(query, [id], (err, results) => {
+  pool.query(query, [id], (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -503,7 +503,7 @@ app.post("/uniforme", async (req, res) => {
         observacion = VALUES(observacion)
     `;
 
-    db.query(
+    pool.query(
       query,
       [
         id_asistencia,
@@ -532,7 +532,7 @@ app.post("/uniforme", async (req, res) => {
 app.get("/uniforme/:id_asistencia", (req, res) => {
   const { id_asistencia } = req.params;
 
-  db.query(
+  pool.query(
     "SELECT * FROM Uniforme WHERE id_asistencia = ?",
     [id_asistencia],
     (err, results) => {
@@ -575,7 +575,7 @@ app.get("/asistencia/grado/:id_grado", (req, res) => {
     ORDER BY a.apellido, a.nombre
   `;
 
-  db.query(query, [fecha, fecha, id_grado], (err, results) => {
+  pool.query(query, [fecha, fecha, id_grado], (err, results) => {
     if (err) {
       console.error("Error en consulta de asistencia:", err);
       return res.status(500).json({ error: "Error al obtener asistencia" });
@@ -613,7 +613,7 @@ app.post("/asistencia/batch", async (req, res) => {
     }
 
     // Iniciar transacción
-    await db.beginTransaction();
+    await pool.beginTransaction();
 
     const queries = asistencias.map((asistencia) => {
       return new Promise((resolve, reject) => {
@@ -624,7 +624,7 @@ app.post("/asistencia/batch", async (req, res) => {
                         estado = VALUES(estado),
                         comentario = VALUES(comentario)
                 `;
-        db.query(
+        pool.query(
           sql,
           [
             asistencia.id_alumno,
@@ -641,14 +641,14 @@ app.post("/asistencia/batch", async (req, res) => {
     });
 
     await Promise.all(queries);
-    await db.commit();
+    await pool.commit();
 
     res.json({
       success: true,
       message: `Asistencia guardada para ${asistencias.length} alumnos`,
     });
   } catch (error) {
-    await db.rollback();
+    await pool.rollback();
     console.error("Error en batch de asistencias:", error);
     res.status(500).json({
       error: "Error al guardar asistencias",
@@ -672,7 +672,7 @@ app.put("/asistencia/update-multiple", (req, res) => {
   asistencias.forEach((asistencia) => {
     if (asistencia.id_asistencia) {
       updates.push(
-        db.query(
+        pool.query(
           "UPDATE Asistencia SET estado = ?, comentario = ? WHERE id_asistencia = ?",
           [
             asistencia.estado,
@@ -683,7 +683,7 @@ app.put("/asistencia/update-multiple", (req, res) => {
       );
     } else if (asistencia.id_alumno && asistencia.fecha) {
       updates.push(
-        db.query(
+        pool.query(
           "INSERT INTO Asistencia (id_alumno, fecha, estado, comentario) VALUES (?, ?, ?, ?)",
           [
             asistencia.id_alumno,
@@ -742,7 +742,7 @@ app.get("/asistencia/grado/:nombre_grado", (req, res) => {
     ORDER BY a.apellido, a.nombre
   `;
 
-  db.query(query, [fecha, nombre_grado], (err, results) => {
+  pool.query(query, [fecha, nombre_grado], (err, results) => {
     if (err) {
       console.error("Error en consulta de asistencia:", err);
       return res.status(500).json({ error: "Error al obtener asistencia" });
@@ -762,7 +762,7 @@ app.post("/asistencia/batch", async (req, res) => {
     // Dentro del map de asistencias:
     if (asistencia.uniforme) {
       console.log("Uniforme a guardar:", asistencia.uniforme); // ← Depuración
-      await db.query(
+      await pool.query(
         `INSERT INTO Uniforme 
          (id_asistencia, zapatos, playera, pantalon, sueter, corte_pelo, observacion)
          VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -822,7 +822,7 @@ app.get("/asistencia/grado/", (req, res) => {
     params.push(nivel);
   }
 
-  db.query(query, params, (err, results) => {
+  pool.query(query, params, (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -860,7 +860,7 @@ app.get("/asistencia/buscar", async (req, res) => {
             LIMIT 10
         `;
 
-    db.query(searchQuery, [`%${nombre}%`], (err, results) => {
+    pool.query(searchQuery, [`%${nombre}%`], (err, results) => {
       if (err) {
         console.error("Error en búsqueda:", err);
         return res.status(500).json({ error: "Error en la búsqueda" });
