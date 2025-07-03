@@ -5,15 +5,28 @@ const cors = require("cors");
 const app = express();
 
 // Configuración básica
+const allowedOrigins = [
+  "http://127.0.0.1:5501",
+  "http://127.0.0.1:5502",
+  "http://localhost:5500", // opcionalmente este también
+  "https://bemmoralesmora.github.io",
+  "https://bemmoralesmora.github.io/Listado_scl",
+];
+
 app.use(
   cors({
-    origin: "http://127.0.0.1:5501", // o usa '*' para permitir todos los orígenes (no recomendado para producción)
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("No permitido por CORS"));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
+    credentials: true,
   })
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
 // Conexión a MySQL (versión simplificada)
 const db = mysql.createConnection({
