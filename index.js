@@ -33,7 +33,7 @@ app.use(
 const pool = mysql.createPool({
   host: "b9samry19yq5e4x35vfy-mysql.services.clever-cloud.com",
   user: "ukqfgworavi3hxdt",
-  password: "t6FDMvpoolFqO7WPA2q6SC",
+  password: "t6FDMvdbFqO7WPA2q6SC",
   database: "b9samry19yq5e4x35vfy",
   port: 3306,
   connectionLimit: 10, // cantidad máxima de conexiones simultáneas
