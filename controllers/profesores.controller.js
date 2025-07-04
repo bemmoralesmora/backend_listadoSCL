@@ -151,21 +151,21 @@ const profesoresController = {
         });
       }
 
-      const [results] = await pool.query(
+      const [rows] = await pool.query(
         `
         SELECT p.*, g.nombre_grado 
         FROM Profesores p
         LEFT JOIN Grados g ON p.id_grado_asignado = g.id_grado
         WHERE p.email = ?
-      `,
+        `,
         [email]
       );
 
-      if (results.length === 0) {
+      if (rows.length === 0) {
         return res.status(401).json({ error: "Credenciales incorrectas" });
       }
 
-      const profesor = results[0];
+      const profesor = rows[0];
 
       if (profesor.contraseña !== contraseña) {
         return res.status(401).json({ error: "Credenciales incorrectas" });
