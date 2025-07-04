@@ -1,4 +1,4 @@
-const mysql = require("mysql");
+const mysql = require("mysql2/promise");
 
 const pool = mysql.createPool({
   host: "b9samry19yq5e4x35vfy-mysql.services.clever-cloud.com",
