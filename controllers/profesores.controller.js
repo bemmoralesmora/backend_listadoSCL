@@ -151,24 +151,27 @@ const profesoresController = {
         });
       }
 
-      const [rows] = await pool.query(
-        `
+      const query = `
         SELECT p.*, g.nombre_grado 
         FROM Profesores p
         LEFT JOIN Grados g ON p.id_grado_asignado = g.id_grado
         WHERE p.email = ?
-        `,
-        [email]
-      );
+      `;
 
-      if (rows.length === 0) {
-        return res.status(401).json({ error: "Credenciales incorrectas" });
+      const [results] = await pool.query(query, [email]);
+
+      if (results.length === 0) {
+        return res.status(401).json({
+          error: "Credenciales incorrectas",
+        });
       }
 
-      const profesor = rows[0];
+      const profesor = results[0];
 
       if (profesor.contraseña !== contraseña) {
-        return res.status(401).json({ error: "Credenciales incorrectas" });
+        return res.status(401).json({
+          error: "Credenciales incorrectas",
+        });
       }
 
       res.json({
@@ -184,7 +187,9 @@ const profesoresController = {
       });
     } catch (err) {
       console.error("Error en login:", err);
-      res.status(500).json({ error: "Error interno del servidor" });
+      res.status(500).json({
+        error: "Error interno del servidor",
+      });
     }
   },
 };
