@@ -16,12 +16,29 @@ const alumnosController = {
 
   createAlumno: async (req, res) => {
     try {
-      const { nombre, apellido, grado } = req.body;
+      const { nombre, apellido, grado, email, contraseña } = req.body;
 
-      if (!nombre || !apellido || !grado) {
+      // Validar campos requeridos
+      if (!nombre || !apellido || !grado || !email || !contraseña) {
         return res.status(400).json({
-          error: "Nombre, apellido y grado son requeridos",
+          error:
+            "Todos los campos son requeridos (nombre, apellido, grado, email, contraseña)",
         });
+      }
+
+      // Validar formato de email
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: "Formato de email inválido" });
+      }
+
+      // Validar si el email ya existe
+      const [emailExists] = await pool.query(
+        "SELECT id_alumno FROM Alumnos WHERE email = ?",
+        [email]
+      );
+
+      if (emailExists.length > 0) {
+        return res.status(400).json({ error: "El email ya está registrado" });
       }
 
       // Buscar el grado
@@ -36,25 +53,31 @@ const alumnosController = {
 
       const id_grado = gradoResults[0].id_grado;
 
+      // Hash de la contraseña (usando bcrypt en producción)
+      // const hashedPassword = await bcrypt.hash(contraseña, 10);
+      // Por ahora guardamos la contraseña sin hashear (solo para desarrollo)
+      const hashedPassword = contraseña;
+
       // Insertar alumno
       const [result] = await pool.query(
-        "INSERT INTO Alumnos (nombre, apellido, id_grado) VALUES (?, ?, ?)",
-        [nombre, apellido, id_grado]
+        "INSERT INTO Alumnos (nombre, apellido, id_grado, email, contraseña) VALUES (?, ?, ?, ?, ?)",
+        [nombre, apellido, id_grado, email, hashedPassword]
       );
 
       // Obtener alumno creado
       const [alumnoResults] = await pool.query(
         `
-        SELECT a.*, g.nombre_grado 
+        SELECT a.id_alumno, a.nombre, a.apellido, a.email, g.nombre_grado as grado 
         FROM Alumnos a
         JOIN Grados g ON a.id_grado = g.id_grado
         WHERE a.id_alumno = ?
-      `,
+        `,
         [result.insertId]
       );
 
       res.status(201).json(alumnoResults[0]);
     } catch (err) {
+      console.error("Error en createAlumno:", err);
       res.status(500).json({ error: err.message });
     }
   },
