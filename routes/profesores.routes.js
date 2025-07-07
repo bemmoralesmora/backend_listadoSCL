@@ -20,4 +20,10 @@ router.put("/:id/grado", profesoresController.updateGradoAsignado);
 // POST /login-profesor - Autenticación
 router.post("/login-profesor", profesoresController.loginProfesor);
 
+router.post("/recuperarPass", profesoresController.recuperarContraseña);
+
+router.post("/verificarCodigo", profesoresController.verificarCodigo);
+
+router.post("/actualizarContraseña", profesoresController.actualizarContraseña);
+
 module.exports = router;
