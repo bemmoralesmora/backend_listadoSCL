@@ -152,6 +152,7 @@ const profesoresController = {
     try {
       const { email, contraseña } = req.body;
 
+      // Validación de campos requeridos
       if (!email || !contraseña) {
         return res.status(400).json({
           error: "Email y contraseña son requeridos",
@@ -179,7 +180,13 @@ const profesoresController = {
 
       const profesor = results[0];
 
-      if (profesor.contraseña !== contraseña) {
+      // Comparación segura con bcrypt
+      const contraseñaValida = await bcrypt.compare(
+        contraseña,
+        profesor.contraseña
+      );
+
+      if (!contraseñaValida) {
         return res.status(401).json({
           error: "Credenciales incorrectas",
         });
