@@ -208,8 +208,7 @@ const profesoresController = {
     const { email } = req.body;
 
     try {
-      // 1. Verificar si el correo existe en la base de datos
-      const [profesor] = await db.query(
+      const [profesor] = await pool.query(
         "SELECT id_profesor FROM Profesores WHERE email = ?",
         [email]
       );
@@ -222,21 +221,18 @@ const profesoresController = {
 
       const id_profesor = profesor[0].id_profesor;
 
-      // 2. Generar código de 4 dígitos
       const codigo = Math.floor(1000 + Math.random() * 9000);
 
-      // 3. Guardar código en la base de datos (eliminar códigos anteriores primero)
-      await db.query(
+      await pool.query(
         "DELETE FROM RecuperacionContraseñas WHERE id_profesor = ?",
         [id_profesor]
       );
 
-      await db.query(
+      await pool.query(
         "INSERT INTO RecuperacionContraseñas (id_profesor, codigo) VALUES (?, ?)",
         [id_profesor, codigo]
       );
 
-      // 4. Enviar correo electrónico
       const mailOptions = {
         from: "tuemail@gmail.com",
         to: email,
@@ -257,8 +253,7 @@ const profesoresController = {
     const { email, codigo } = req.body;
 
     try {
-      // 1. Obtener el id_profesor del correo
-      const [profesor] = await db.query(
+      const [profesor] = await pool.query(
         "SELECT id_profesor FROM Profesores WHERE email = ?",
         [email]
       );
@@ -271,8 +266,7 @@ const profesoresController = {
 
       const id_profesor = profesor[0].id_profesor;
 
-      // 2. Verificar el código
-      const [codigoDB] = await db.query(
+      const [codigoDB] = await pool.query(
         "SELECT codigo FROM RecuperacionContraseñas WHERE id_profesor = ?",
         [id_profesor]
       );
@@ -294,8 +288,7 @@ const profesoresController = {
     const { email, codigo, nuevaContraseña } = req.body;
 
     try {
-      // 1. Verificar que el código sea correcto (reutilizamos la función anterior)
-      const [profesor] = await db.query(
+      const [profesor] = await pool.query(
         "SELECT id_profesor FROM Profesores WHERE email = ?",
         [email]
       );
@@ -308,7 +301,7 @@ const profesoresController = {
 
       const id_profesor = profesor[0].id_profesor;
 
-      const [codigoDB] = await db.query(
+      const [codigoDB] = await pool.query(
         "SELECT codigo FROM RecuperacionContraseñas WHERE id_profesor = ?",
         [id_profesor]
       );
@@ -319,18 +312,15 @@ const profesoresController = {
           .json({ success: false, message: "Código incorrecto" });
       }
 
-      // 2. Hashear la nueva contraseña
       const salt = await bcrypt.genSalt(10);
       const contraseñaHash = await bcrypt.hash(nuevaContraseña, salt);
 
-      // 3. Actualizar la contraseña en la base de datos
-      await db.query(
+      await pool.query(
         "UPDATE Profesores SET contraseña = ? WHERE id_profesor = ?",
         [contraseñaHash, id_profesor]
       );
 
-      // 4. Eliminar el código de recuperación
-      await db.query(
+      await pool.query(
         "DELETE FROM RecuperacionContraseñas WHERE id_profesor = ?",
         [id_profesor]
       );
