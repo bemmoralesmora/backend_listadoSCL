@@ -318,6 +318,128 @@ const asistenciaController = {
       });
     }
   },
+
+  // Obtener comentarios de un alumno
+  obtenerComentariosAlumno: async (req, res) => {
+    try {
+      const { id_alumno } = req.params;
+
+      const query = `
+      SELECT fecha, comentario 
+      FROM Asistencia 
+      WHERE id_alumno = ? AND comentario IS NOT NULL AND comentario != ''
+      ORDER BY fecha DESC
+    `;
+
+      const [comentarios] = await pool.query(query, [id_alumno]);
+      res.json(comentarios);
+    } catch (error) {
+      console.error("Error al obtener comentarios:", error);
+      res.status(500).json({ error: "Error al obtener comentarios" });
+    }
+  },
+
+  // Obtener datos del uniforme de un alumno
+  obtenerUniformeAlumno: async (req, res) => {
+    try {
+      const { id_alumno } = req.params;
+
+      const query = `
+      SELECT 
+        u.zapatos,
+        u.playera,
+        u.pantalon,
+        u.sueter,
+        u.corte_pelo,
+        u.observacion,
+        a.fecha
+      FROM Uniforme u
+      JOIN Asistencia a ON u.id_asistencia = a.id_asistencia
+      WHERE a.id_alumno = ?
+      ORDER BY a.fecha DESC
+      LIMIT 1
+    `;
+
+      const [uniforme] = await pool.query(query, [id_alumno]);
+
+      if (uniforme.length === 0) {
+        return res
+          .status(404)
+          .json({ error: "No se encontraron registros de uniforme" });
+      }
+
+      res.json(uniforme[0]);
+    } catch (error) {
+      console.error("Error al obtener uniforme:", error);
+      res.status(500).json({ error: "Error al obtener datos del uniforme" });
+    }
+  },
+
+  // Eliminar un alumno
+  eliminarAlumno: async (req, res) => {
+    try {
+      const { id_alumno } = req.params;
+      const { profesor_email, profesor_password } = req.body;
+
+      if (!profesor_email || !profesor_password) {
+        return res.status(400).json({
+          error: "Credenciales de profesor requeridas",
+        });
+      }
+
+      // Verificar credenciales del profesor
+      const [profesor] = await pool.query(
+        "SELECT * FROM Profesores WHERE email = ? AND contraseña = ?",
+        [profesor_email, profesor_password]
+      );
+
+      if (profesor.length === 0) {
+        return res.status(401).json({
+          error: "Credenciales de profesor inválidas",
+        });
+      }
+
+      // Verificar si el alumno existe
+      const [alumno] = await pool.query(
+        "SELECT * FROM Alumnos WHERE id_alumno = ?",
+        [id_alumno]
+      );
+      if (alumno.length === 0) {
+        return res.status(404).json({ error: "Alumno no encontrado" });
+      }
+
+      // Iniciar transacción
+      await pool.query("START TRANSACTION");
+
+      try {
+        // Eliminar registros relacionados
+        await pool.query(
+          `
+          DELETE u FROM Uniforme u
+          JOIN Asistencia a ON u.id_asistencia = a.id_asistencia
+          WHERE a.id_alumno = ?
+        `,
+          [id_alumno]
+        );
+
+        await pool.query("DELETE FROM Asistencia WHERE id_alumno = ?", [
+          id_alumno,
+        ]);
+        await pool.query("DELETE FROM Alumnos WHERE id_alumno = ?", [
+          id_alumno,
+        ]);
+
+        await pool.query("COMMIT");
+        res.json({ success: true, message: "Alumno eliminado correctamente" });
+      } catch (error) {
+        await pool.query("ROLLBACK");
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error al eliminar alumno:", error);
+      res.status(500).json({ error: "Error al eliminar alumno" });
+    }
+  },
 };
 
 module.exports = asistenciaController;
