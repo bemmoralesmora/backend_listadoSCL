@@ -24,6 +24,6 @@ router.post("/recuperarPass", profesoresController.recuperarContraseña);
 
 router.post("/verificarCodigo", profesoresController.verificarCodigo);
 
-router.post("/actualizarContraseña", profesoresController.actualizarContraseña);
+router.post("/actualizarPass", profesoresController.actualizarContraseña);
 
 module.exports = router;
