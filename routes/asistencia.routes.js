@@ -20,6 +20,8 @@ router.put("/update-multiple", asistenciaController.updateMultipleAsistencias);
 // GET /asistencia/grado/ - Por nivel
 router.get("/grado/", asistenciaController.getAsistenciaByNivel);
 
+router.post("/enviar-email", asistenciaController.enviarEmail);
+
 // GET /asistencia/buscar - Buscar alumnos
 router.get("/buscar", asistenciaController.buscarAlumnosAsistencia);
 

@@ -1,4 +1,13 @@
 const pool = require("../config/database");
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "parismirnov@gmail.com",
+    pass: "vfeffjshcdbrttdo",
+  },
+});
 
 const asistenciaController = {
   getAsistenciaByGradoId: async (req, res) => {
@@ -275,6 +284,48 @@ const asistenciaController = {
       res.status(500).json({
         error: error.message,
         details: "Error al obtener asistencia por nivel",
+      });
+    }
+  },
+
+  enviarEmail: async (req, res) => {
+    try {
+      const { destinatario, asunto, mensaje } = req.body;
+
+      // Validar los datos recibidos
+      if (!destinatario || !asunto || !mensaje) {
+        return res.status(400).json({
+          success: false,
+          message: "Faltan campos requeridos: destinatario, asunto o mensaje",
+        });
+      }
+
+      // Configurar el correo electrónico
+      const mailOptions = {
+        from: '"Sistema de Asistencia" <parismirnov@gmail.com>',
+        to: destinatario,
+        subject: asunto,
+        text: mensaje,
+        // También puedes usar html si quieres formato:
+        // html: `<p>${mensaje}</p>`
+      };
+
+      // Enviar el correo
+      const info = await transporter.sendMail(mailOptions);
+
+      console.log("Correo enviado:", info.messageId);
+
+      res.json({
+        success: true,
+        message: "Correo enviado con éxito",
+        info: info.messageId,
+      });
+    } catch (error) {
+      console.error("Error al enviar correo:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error al enviar el correo",
+        error: error.message,
       });
     }
   },
