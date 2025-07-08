@@ -1,4 +1,4 @@
-const profesoresController = require("./profesores.controller");
+/* const profesoresController = require("./profesores.controller");
 const adminController = require("./admin.controller");
 const alumnosController = require("./alumnos.controller");
 
@@ -113,3 +113,4 @@ const authController = {
 };
 
 module.exports = authController;
+ */

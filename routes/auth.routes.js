@@ -1,4 +1,4 @@
-const express = require("express");
+/* const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/auth.controller");
 
@@ -9,3 +9,4 @@ router.post("/verificar-codigo", authController.verificarCodigo);
 router.post("/actualizar-pass", authController.actualizarPassword);
 
 module.exports = router;
+ */
