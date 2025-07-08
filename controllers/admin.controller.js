@@ -250,6 +250,78 @@ const adminController = {
       });
     }
   },
+
+  getAdminInfo: async (req, res) => {
+    try {
+      const [admins] = await pool.query(
+        "SELECT nombre, apellido, email FROM Administradores WHERE id_admin = ?",
+        [req.user.id]
+      );
+
+      if (admins.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Administrador no encontrado",
+        });
+      }
+
+      res.json(admins[0]);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        success: false,
+        message: "Error al obtener información del administrador",
+      });
+    }
+  },
+
+  verifyPassword: async (req, res) => {
+    try {
+      const { password } = req.body;
+
+      if (!password) {
+        return res.status(400).json({
+          success: false,
+          message: "La contraseña es requerida",
+        });
+      }
+
+      const [admins] = await pool.query(
+        "SELECT contraseña FROM Administradores WHERE id_admin = ?",
+        [req.user.id]
+      );
+
+      if (admins.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Administrador no encontrado",
+        });
+      }
+
+      const contraseñaValida = await bcrypt.compare(
+        password,
+        admins[0].contraseña
+      );
+
+      if (!contraseñaValida) {
+        return res.status(401).json({
+          success: false,
+          message: "Contraseña incorrecta",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Contraseña verificada",
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        success: false,
+        message: "Error al verificar la contraseña",
+      });
+    }
+  },
 };
 
 module.exports = adminController;

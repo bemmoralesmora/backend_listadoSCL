@@ -341,6 +341,165 @@ const profesoresController = {
       res.status(500).json({ success: false, message: "Error en el servidor" });
     }
   },
+
+  getProfesores: async (req, res) => {
+    try {
+      const [profesores] = await pool.query(`
+        SELECT p.id_profesor, p.nombre, p.apellido, p.email, p.id_grado_asignado
+        FROM Profesores p
+        ORDER BY p.apellido, p.nombre
+      `);
+
+      res.json(profesores);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        success: false,
+        message: "Error al obtener la lista de profesores",
+      });
+    }
+  },
+
+  createProfesor: async (req, res) => {
+    try {
+      const { nombre, apellido, email, id_grado_asignado, contraseña } =
+        req.body;
+
+      // Validar campos requeridos
+      if (!nombre || !apellido || !email || !contraseña) {
+        return res.status(400).json({
+          success: false,
+          message: "Nombre, apellido, email y contraseña son requeridos",
+        });
+      }
+
+      // Verificar si el email ya existe
+      const [existing] = await pool.query(
+        "SELECT id_profesor FROM Profesores WHERE email = ?",
+        [email]
+      );
+
+      if (existing.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "El email ya está registrado",
+        });
+      }
+
+      // Hashear la contraseña
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(contraseña, salt);
+
+      // Insertar nuevo profesor
+      const [result] = await pool.query(
+        "INSERT INTO Profesores (nombre, apellido, email, contraseña, id_grado_asignado) VALUES (?, ?, ?, ?, ?)",
+        [nombre, apellido, email, hashedPassword, id_grado_asignado || null]
+      );
+
+      res.json({
+        success: true,
+        message: "Profesor creado exitosamente",
+        id: result.insertId,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        success: false,
+        message: "Error al crear el profesor",
+      });
+    }
+  },
+
+  updateProfesor: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nombre, apellido, email, id_grado_asignado } = req.body;
+
+      // Validar campos requeridos
+      if (!nombre || !apellido || !email) {
+        return res.status(400).json({
+          success: false,
+          message: "Nombre, apellido y email son requeridos",
+        });
+      }
+
+      // Verificar si el profesor existe
+      const [existing] = await pool.query(
+        "SELECT id_profesor FROM Profesores WHERE id_profesor = ?",
+        [id]
+      );
+
+      if (existing.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Profesor no encontrado",
+        });
+      }
+
+      // Verificar si el nuevo email ya existe (en otro profesor)
+      const [emailCheck] = await pool.query(
+        "SELECT id_profesor FROM Profesores WHERE email = ? AND id_profesor != ?",
+        [email, id]
+      );
+
+      if (emailCheck.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "El email ya está registrado por otro profesor",
+        });
+      }
+
+      // Actualizar profesor
+      await pool.query(
+        "UPDATE Profesores SET nombre = ?, apellido = ?, email = ?, id_grado_asignado = ? WHERE id_profesor = ?",
+        [nombre, apellido, email, id_grado_asignado || null, id]
+      );
+
+      res.json({
+        success: true,
+        message: "Profesor actualizado exitosamente",
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        success: false,
+        message: "Error al actualizar el profesor",
+      });
+    }
+  },
+
+  deleteProfesor: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Verificar si el profesor existe
+      const [existing] = await pool.query(
+        "SELECT id_profesor FROM Profesores WHERE id_profesor = ?",
+        [id]
+      );
+
+      if (existing.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Profesor no encontrado",
+        });
+      }
+
+      // Eliminar profesor
+      await pool.query("DELETE FROM Profesores WHERE id_profesor = ?", [id]);
+
+      res.json({
+        success: true,
+        message: "Profesor eliminado exitosamente",
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        success: false,
+        message: "Error al eliminar el profesor",
+      });
+    }
+  },
 };
 
 module.exports = profesoresController;
