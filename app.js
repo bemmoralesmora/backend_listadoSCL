@@ -12,8 +12,9 @@ const perfilRoutes = require("./routes/perfil.routes");
 const adminRoutes = require("./routes/admin.routes");
 const authRoutes = require("./routes/auth.routes"); // Nuevo router para autenticación
 
-app.use(express.json());
 app.use(cors(corsConfig));
+app.options("*", cors(corsConfig)); // Permite las preflight requests
+app.use(express.json());
 
 app.use("/auth", authRoutes); // Autenticación (login, recuperación pass)
 

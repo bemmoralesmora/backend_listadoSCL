@@ -14,9 +14,10 @@ const corsConfig = {
       callback(new Error("No permitido por CORS"));
     }
   },
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "DELETE", "HEAD"],
   allowedHeaders: ["Content-Type"],
   credentials: true,
+  optionsSuccessStatus: 204,
 };
 
 module.exports = corsConfig;
