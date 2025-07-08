@@ -16,22 +16,30 @@ const adminController = {
         });
       }
 
+      // Añadir logs para depuración
+      console.log(`Intentando login para admin con email: ${email}`);
+
       const query = "SELECT * FROM Administradores WHERE email = ?";
       const [results] = await pool.query(query, [email]);
 
       if (results.length === 0) {
+        console.log(`No se encontró admin con email: ${email}`);
         return res.status(401).json({
           error: "Credenciales incorrectas",
         });
       }
 
       const admin = results[0];
+      console.log(`Admin encontrado: ${admin.nombre} ${admin.apellido}`);
+
+      // Verificar contraseña
       const contraseñaValida = await bcrypt.compare(
         contraseña,
         admin.contraseña
       );
 
       if (!contraseñaValida) {
+        console.log(`Contraseña incorrecta para admin: ${email}`);
         return res.status(401).json({
           error: "Credenciales incorrectas",
         });
@@ -50,6 +58,7 @@ const adminController = {
       console.error("Error en login admin:", err);
       res.status(500).json({
         error: "Error interno del servidor",
+        details: err.message,
       });
     }
   },
