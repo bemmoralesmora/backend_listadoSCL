@@ -1,5 +1,14 @@
 const pool = require("../config/database");
 const bcrypt = require("bcrypt");
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "parismirnov@gmail.com",
+    pass: "vfeffjshcdbrttdo",
+  },
+});
 
 const adminController = {
   loginAdmin: async (req, res) => {
