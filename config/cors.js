@@ -15,7 +15,7 @@ const corsConfig = {
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "HEAD"],
-  allowedHeaders: ["Content-Type"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
   optionsSuccessStatus: 204,
 };
