@@ -1,3 +1,4 @@
+require("dotenv").config();
 const pool = require("../config/database");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
@@ -5,8 +6,8 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "parismirnov@gmail.com",
-    pass: "vfeffjshcdbrttdo",
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
@@ -25,23 +26,21 @@ const adminController = {
         });
       }
 
-      // Añadir logs para depuración
       console.log(`Intentando login para admin con email: ${email}`);
 
-      const query = "SELECT * FROM Administradores WHERE email = ?";
-      const [results] = await pool.query(query, [email]);
+      const [rows] = await pool.query(
+        "SELECT * FROM Administradores WHERE email = ?",
+        [email]
+      );
 
-      if (results.length === 0) {
+      if (rows.length === 0) {
         console.log(`No se encontró admin con email: ${email}`);
-        return res.status(401).json({
-          error: "Credenciales incorrectas",
-        });
+        return res.status(401).json({ error: "Credenciales incorrectas" });
       }
 
-      const admin = results[0];
+      const admin = rows[0];
       console.log(`Admin encontrado: ${admin.nombre} ${admin.apellido}`);
 
-      // Verificar contraseña
       const contraseñaValida = await bcrypt.compare(
         contraseña,
         admin.contraseña
@@ -49,12 +48,10 @@ const adminController = {
 
       if (!contraseñaValida) {
         console.log(`Contraseña incorrecta para admin: ${email}`);
-        return res.status(401).json({
-          error: "Credenciales incorrectas",
-        });
+        return res.status(401).json({ error: "Credenciales incorrectas" });
       }
 
-      res.json({
+      return res.json({
         success: true,
         admin: {
           id: admin.id_admin,
@@ -65,45 +62,55 @@ const adminController = {
       });
     } catch (err) {
       console.error("Error en login admin:", err);
-      res.status(500).json({
+      return res.status(500).json({
         error: "Error interno del servidor",
         details: err.message,
       });
     }
   },
 
-  // Funciones para recuperación de contraseña (similar a profesores)
-  recuperarContraseña: async (req, res) => {
+  recuperarContrasena: async (req, res) => {
     const { email } = req.body;
 
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "El email es requerido",
+      });
+    }
+
     try {
-      const [admin] = await pool.query(
+      // Buscar admin por email
+      const [admins] = await pool.query(
         "SELECT id_admin FROM Administradores WHERE email = ?",
         [email]
       );
 
-      if (!admin || admin.length === 0) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Correo no registrado" });
+      if (admins.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Correo no registrado",
+        });
       }
 
-      const id_admin = admin[0].id_admin;
+      const id_admin = admins[0].id_admin;
       const codigo = Math.floor(1000 + Math.random() * 9000);
 
+      // Eliminar códigos previos
       await pool.query(
         "DELETE FROM RecuperacionContraseñas WHERE id_admin = ?",
         [id_admin]
       );
 
+      // Insertar nuevo código
       await pool.query(
         "INSERT INTO RecuperacionContraseñas (id_admin, codigo) VALUES (?, ?)",
         [id_admin, codigo]
       );
 
-      // Enviar correo (usar el mismo transporter que en profesores)
+      // Enviar correo
       const mailOptions = {
-        from: "tuemail@gmail.com",
+        from: "tuemail@gmail.com", // Cambia por tu email real o usa variable de entorno
         to: email,
         subject: "Código de recuperación de contraseña",
         text: `Tu código de verificación es: ${codigo}`,
@@ -111,96 +118,136 @@ const adminController = {
 
       await transporter.sendMail(mailOptions);
 
-      res.json({ success: true, message: "Código enviado al correo" });
+      return res.json({
+        success: true,
+        message: "Código enviado al correo",
+      });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: "Error en el servidor" });
+      return res.status(500).json({
+        success: false,
+        message: "Error en el servidor",
+      });
     }
   },
 
   verificarCodigo: async (req, res) => {
     const { email, codigo } = req.body;
 
+    if (!email || !codigo) {
+      return res.status(400).json({
+        success: false,
+        message: "Email y código son requeridos",
+      });
+    }
+
     try {
-      const [admin] = await pool.query(
+      // Buscar admin
+      const [admins] = await pool.query(
         "SELECT id_admin FROM Administradores WHERE email = ?",
         [email]
       );
 
-      if (!admin || admin.length === 0) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Correo no registrado" });
+      if (admins.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Correo no registrado",
+        });
       }
 
-      const id_admin = admin[0].id_admin;
+      const id_admin = admins[0].id_admin;
 
-      const [codigoDB] = await pool.query(
+      // Verificar código
+      const [codigos] = await pool.query(
         "SELECT codigo FROM RecuperacionContraseñas WHERE id_admin = ?",
         [id_admin]
       );
 
-      if (!codigoDB || codigoDB.length === 0 || codigoDB[0].codigo != codigo) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Código incorrecto" });
+      if (codigos.length === 0 || codigos[0].codigo != codigo) {
+        return res.status(400).json({
+          success: false,
+          message: "Código incorrecto",
+        });
       }
 
-      res.json({ success: true, message: "Código verificado" });
+      return res.json({
+        success: true,
+        message: "Código verificado",
+      });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: "Error en el servidor" });
+      return res.status(500).json({
+        success: false,
+        message: "Error en el servidor",
+      });
     }
   },
 
-  actualizarContraseña: async (req, res) => {
+  actualizarContrasena: async (req, res) => {
     const { email, codigo, nuevaContraseña } = req.body;
 
+    if (!email || !codigo || !nuevaContraseña) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, código y nueva contraseña son requeridos",
+      });
+    }
+
     try {
-      const [admin] = await pool.query(
+      // Buscar admin
+      const [admins] = await pool.query(
         "SELECT id_admin FROM Administradores WHERE email = ?",
         [email]
       );
 
-      if (!admin || admin.length === 0) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Correo no registrado" });
+      if (admins.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Correo no registrado",
+        });
       }
 
-      const id_admin = admin[0].id_admin;
+      const id_admin = admins[0].id_admin;
 
-      const [codigoDB] = await pool.query(
+      // Verificar código
+      const [codigos] = await pool.query(
         "SELECT codigo FROM RecuperacionContraseñas WHERE id_admin = ?",
         [id_admin]
       );
 
-      if (!codigoDB || codigoDB.length === 0 || codigoDB[0].codigo != codigo) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Código incorrecto" });
+      if (codigos.length === 0 || codigos[0].codigo != codigo) {
+        return res.status(400).json({
+          success: false,
+          message: "Código incorrecto",
+        });
       }
 
+      // Hashear nueva contraseña
       const salt = await bcrypt.genSalt(10);
-      const contraseñaHash = await bcrypt.hash(nuevaContraseña, salt);
+      const hash = await bcrypt.hash(nuevaContraseña, salt);
 
+      // Actualizar contraseña
       await pool.query(
         "UPDATE Administradores SET contraseña = ? WHERE id_admin = ?",
-        [contraseñaHash, id_admin]
+        [hash, id_admin]
       );
 
+      // Borrar código de recuperación usado
       await pool.query(
         "DELETE FROM RecuperacionContraseñas WHERE id_admin = ?",
         [id_admin]
       );
 
-      res.json({
+      return res.json({
         success: true,
         message: "Contraseña actualizada correctamente",
       });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: "Error en el servidor" });
+      return res.status(500).json({
+        success: false,
+        message: "Error en el servidor",
+      });
     }
   },
 };
