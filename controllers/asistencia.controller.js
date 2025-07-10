@@ -1,5 +1,6 @@
 const pool = require("../config/database");
 const nodemailer = require("nodemailer");
+const bcrypt = require("bcrypt");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
