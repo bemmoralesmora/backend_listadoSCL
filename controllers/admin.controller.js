@@ -16,14 +16,8 @@ const adminController = {
     try {
       const { email, contraseña } = req.body;
 
-      if (!email || !contraseña) {
-        return res.status(400).json({
-          error: "Email y contraseña son requeridos",
-          details: {
-            email: !email ? "Campo requerido" : undefined,
-            contraseña: !contraseña ? "Campo requerido" : undefined,
-          },
-        });
+      if (typeof email !== "string" || typeof contraseña !== "string") {
+        return res.status(400).json({ error: "Datos inválidos" });
       }
 
       console.log(`Intentando login para admin con email: ${email}`);
@@ -264,12 +258,12 @@ const adminController = {
       // 2. Consulta más específica con campos explícitos
       const [adminData] = await pool.query(
         `SELECT 
-          nombre, 
-          apellido, 
-          email 
-         FROM Administradores 
-         WHERE id_admin = ? 
-         LIMIT 1`,
+        nombre, 
+        apellido, 
+        email 
+       FROM Administradores 
+       WHERE id_admin = ? 
+       LIMIT 1`,
         [req.user.id]
       );
 
