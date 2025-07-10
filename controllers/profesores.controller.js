@@ -155,6 +155,7 @@ const profesoresController = {
       // Validación de campos requeridos
       if (!email || !contraseña) {
         return res.status(400).json({
+          success: false,
           error: "Email y contraseña son requeridos",
           details: {
             email: !email ? "Campo requerido" : undefined,
@@ -170,43 +171,70 @@ const profesoresController = {
         WHERE p.email = ?
       `;
 
-      const [results] = await pool.query(query, [email]);
+      const [results] = await pool.query(query, [email.trim()]);
 
       if (results.length === 0) {
         return res.status(401).json({
+          success: false,
           error: "Credenciales incorrectas",
+          details: "Email no registrado",
         });
       }
 
       const profesor = results[0];
+      let contraseñaValida = false;
 
-      // Comparación segura con bcrypt
-      const contraseñaValida = await bcrypt.compare(
-        contraseña,
-        profesor.contraseña
-      );
+      // Verificación flexible de contraseña (hasheada o no)
+      if (profesor.contraseña.startsWith("$2b$")) {
+        // Contraseña hasheada
+        contraseñaValida = await bcrypt.compare(
+          contraseña,
+          profesor.contraseña
+        );
+      } else {
+        // Contraseña no hasheada (comparación directa)
+        contraseñaValida = contraseña === profesor.contraseña;
+
+        // Opcional: Hashear la contraseña antigua y actualizarla en la base de datos
+        if (contraseñaValida) {
+          const hashedPassword = await bcrypt.hash(contraseña, 10);
+          await pool.query(
+            "UPDATE Profesores SET contraseña = ? WHERE id_profesor = ?",
+            [hashedPassword, profesor.id_profesor]
+          );
+        }
+      }
 
       if (!contraseñaValida) {
         return res.status(401).json({
+          success: false,
           error: "Credenciales incorrectas",
+          details: "Contraseña inválida",
         });
       }
 
+      // Eliminar información sensible del objeto profesor
+      const { contraseña: _, ...profesorSinPassword } = profesor;
+
       res.json({
         success: true,
+        message: "Inicio de sesión exitoso",
         profesor: {
-          id: profesor.id_profesor,
-          nombre: profesor.nombre,
-          apellido: profesor.apellido,
-          email: profesor.email,
-          id_grado_asignado: profesor.id_grado_asignado,
-          nombre_grado: profesor.nombre_grado,
+          id: profesorSinPassword.id_profesor,
+          nombre: profesorSinPassword.nombre,
+          apellido: profesorSinPassword.apellido,
+          email: profesorSinPassword.email,
+          id_grado_asignado: profesorSinPassword.id_grado_asignado,
+          nombre_grado: profesorSinPassword.nombre_grado,
         },
       });
     } catch (err) {
       console.error("Error en login:", err);
       res.status(500).json({
+        success: false,
         error: "Error interno del servidor",
+        details:
+          process.env.NODE_ENV === "development" ? err.message : undefined,
       });
     }
   },
