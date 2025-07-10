@@ -253,24 +253,52 @@ const adminController = {
 
   getAdminInfo: async (req, res) => {
     try {
-      const [admins] = await pool.query(
-        "SELECT nombre, apellido, email FROM Administradores WHERE id_admin = ?",
-        [req.user.id]
-      );
-
-      if (admins.length === 0) {
-        return res.status(404).json({
+      // 1. Verificar que el usuario está autenticado y tiene ID
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({
           success: false,
-          message: "Administrador no encontrado",
+          message: "No se proporcionó información de autenticación válida",
         });
       }
 
-      res.json(admins[0]);
+      // 2. Consulta más específica con campos explícitos
+      const [adminData] = await pool.query(
+        `SELECT 
+          nombre, 
+          apellido, 
+          email 
+         FROM Administradores 
+         WHERE id_admin = ? 
+         LIMIT 1`,
+        [req.user.id]
+      );
+
+      // 3. Manejo de caso no encontrado
+      if (!adminData || adminData.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: `No se encontró administrador con ID ${req.user.id}`,
+          adminId: req.user.id, // Para debugging
+        });
+      }
+
+      // 4. Respuesta exitosa
+      res.json({
+        success: true,
+        data: adminData[0],
+      });
     } catch (error) {
-      console.error(error);
+      console.error("Error en getAdminInfo:", {
+        error: error.message,
+        adminId: req.user?.id,
+        timestamp: new Date().toISOString(),
+      });
+
       res.status(500).json({
         success: false,
-        message: "Error al obtener información del administrador",
+        message: "Error interno al obtener información del administrador",
+        systemMessage: error.message, // Solo para desarrollo, quitar en producción
+        code: "ADMIN_INFO_FETCH_ERROR",
       });
     }
   },
