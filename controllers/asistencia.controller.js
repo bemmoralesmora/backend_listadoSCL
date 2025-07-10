@@ -432,21 +432,43 @@ const asistenciaController = {
       const { id_alumno } = req.params;
       const { profesor_email, profesor_password } = req.body;
 
+      // Validar campos requeridos
       if (!profesor_email || !profesor_password) {
         return res.status(400).json({
-          error: "Credenciales de profesor requeridas",
+          error: "Por favor proporcione email y contraseña de profesor",
         });
       }
 
-      // Verificar credenciales del profesor
+      // Verificar si el profesor existe
       const [profesor] = await pool.query(
-        "SELECT * FROM Profesores WHERE email = ? AND contraseña = ?",
-        [profesor_email, profesor_password]
+        "SELECT * FROM Profesores WHERE email = ?",
+        [profesor_email.trim()]
       );
 
       if (profesor.length === 0) {
         return res.status(401).json({
-          error: "Credenciales de profesor inválidas",
+          error: "Email de profesor no encontrado",
+        });
+      }
+
+      const profesorDB = profesor[0];
+      let passwordMatch = false;
+
+      // Verificar contraseña (tanto hasheada como no hasheada)
+      if (profesorDB.contraseña.startsWith("$2b$")) {
+        // Contraseña hasheada - usar bcrypt.compare
+        passwordMatch = await bcrypt.compare(
+          profesor_password,
+          profesorDB.contraseña
+        );
+      } else {
+        // Contraseña no hasheada - comparación directa
+        passwordMatch = profesor_password === profesorDB.contraseña;
+      }
+
+      if (!passwordMatch) {
+        return res.status(401).json({
+          error: "Contraseña incorrecta",
         });
       }
 
@@ -455,40 +477,55 @@ const asistenciaController = {
         "SELECT * FROM Alumnos WHERE id_alumno = ?",
         [id_alumno]
       );
+
       if (alumno.length === 0) {
-        return res.status(404).json({ error: "Alumno no encontrado" });
+        return res.status(404).json({
+          error: "Alumno no encontrado",
+          success: false,
+        });
       }
 
       // Iniciar transacción
       await pool.query("START TRANSACTION");
 
       try {
-        // Eliminar registros relacionados
+        // Eliminar registros relacionados en Uniforme
         await pool.query(
-          `
-          DELETE u FROM Uniforme u
-          JOIN Asistencia a ON u.id_asistencia = a.id_asistencia
-          WHERE a.id_alumno = ?
-        `,
+          `DELETE u FROM Uniforme u
+           JOIN Asistencia a ON u.id_asistencia = a.id_asistencia
+           WHERE a.id_alumno = ?`,
           [id_alumno]
         );
 
+        // Eliminar registros de Asistencia
         await pool.query("DELETE FROM Asistencia WHERE id_alumno = ?", [
           id_alumno,
         ]);
+
+        // Eliminar al alumno
         await pool.query("DELETE FROM Alumnos WHERE id_alumno = ?", [
           id_alumno,
         ]);
 
+        // Confirmar transacción
         await pool.query("COMMIT");
-        res.json({ success: true, message: "Alumno eliminado correctamente" });
+
+        res.json({
+          success: true,
+          message: "Alumno eliminado correctamente",
+        });
       } catch (error) {
+        // Revertir transacción en caso de error
         await pool.query("ROLLBACK");
+        console.error("Error en transacción:", error);
         throw error;
       }
     } catch (error) {
       console.error("Error al eliminar alumno:", error);
-      res.status(500).json({ error: "Error al eliminar alumno" });
+      res.status(500).json({
+        error: "Error interno al eliminar alumno",
+        details: error.message,
+      });
     }
   },
 };
