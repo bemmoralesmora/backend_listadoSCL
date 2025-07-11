@@ -26,17 +26,17 @@ router.get(
 router.post(
   "/profesores",
   authMiddleware.isAdmin,
-  adminController.createProfesor
+  profesoresController.createProfesor
 );
 router.put(
   "/profesores/:id",
   authMiddleware.isAdmin,
-  adminController.updateProfesor
+  profesoresController.updateProfesor
 );
 router.delete(
   "/profesores/:id",
   authMiddleware.isAdmin,
-  adminController.deleteProfesor
+  profesoresController.deleteProfesor
 );
 
 router.get(
