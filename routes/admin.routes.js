@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/admin.controller");
-const profesoresController = require("../controllers/profesores.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 
 // Rutas para autenticación de administradores
@@ -22,22 +21,22 @@ router.post("/actualizar-contrasena", adminController.actualizarContrasena);
 router.get(
   "/profesores",
   authMiddleware.isAdmin,
-  profesoresController.getProfesores
+  adminController.getProfesores
 );
 router.post(
   "/profesores",
   authMiddleware.isAdmin,
-  profesoresController.createProfesor
+  adminController.createProfesor
 );
 router.put(
   "/profesores/:id",
   authMiddleware.isAdmin,
-  profesoresController.updateProfesor
+  adminController.updateProfesor
 );
 router.delete(
   "/profesores/:id",
   authMiddleware.isAdmin,
-  profesoresController.deleteProfesor
+  adminController.deleteProfesor
 );
 
 router.get(
