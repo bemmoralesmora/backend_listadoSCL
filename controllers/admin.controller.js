@@ -344,6 +344,94 @@ const adminController = {
       });
     }
   },
+  getEstadisticasGrados: async (req, res) => {
+    try {
+      // Obtener todos los grados con información básica
+      const [grados] = await pool.query(`
+        SELECT g.id_grado, g.nombre_grado, g.nivel, 
+               COUNT(p.id_profesor) as profesores_asignados,
+               COUNT(a.id_alumno) as total_alumnos
+        FROM Grados g
+        LEFT JOIN Profesores p ON g.id_grado = p.id_grado_asignado
+        LEFT JOIN Alumnos a ON g.id_grado = a.id_grado
+        GROUP BY g.id_grado
+        ORDER BY g.nivel, g.nombre_grado
+      `);
+
+      res.json(grados);
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ error: "Error al obtener estadísticas de grados" });
+    }
+  },
+
+  getEstadisticasAsistencia: async (req, res) => {
+    try {
+      const { idGrado } = req.params;
+      const today = new Date().toISOString().split("T")[0];
+
+      // Obtener estadísticas de asistencia para el grado
+      const [asistencia] = await pool.query(
+        `
+        SELECT 
+          COUNT(*) as total_alumnos,
+          SUM(CASE WHEN a.estado = 'presente' THEN 1 ELSE 0 END) as presentes,
+          SUM(CASE WHEN a.estado = 'ausente' THEN 1 ELSE 0 END) as ausentes
+        FROM Asistencia a
+        JOIN Alumnos al ON a.id_alumno = al.id_alumno
+        WHERE al.id_grado = ? AND a.fecha = ?
+      `,
+        [idGrado, today]
+      );
+
+      res.json(
+        asistencia[0] || { total_alumnos: 0, presentes: 0, ausentes: 0 }
+      );
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ error: "Error al obtener estadísticas de asistencia" });
+    }
+  },
+
+  getEstadisticasUniforme: async (req, res) => {
+    try {
+      const { idGrado } = req.params;
+      const today = new Date().toISOString().split("T")[0];
+
+      // Obtener estadísticas de uniforme (ajusta según tu esquema de DB)
+      const [uniforme] = await pool.query(
+        `
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN u.completo = 1 THEN 1 ELSE 0 END) as completos,
+          SUM(CASE WHEN u.completo = 0 THEN 1 ELSE 0 END) as incompletos
+        FROM UniformeRegistros u
+        JOIN Alumnos a ON u.id_alumno = a.id_alumno
+        WHERE a.id_grado = ? AND u.fecha = ?
+      `,
+        [idGrado, today]
+      );
+
+      const porcentaje =
+        uniforme[0].total > 0
+          ? Math.round((uniforme[0].completos / uniforme[0].total) * 100)
+          : 0;
+
+      res.json({
+        ...uniforme[0],
+        porcentaje_completo: porcentaje,
+      });
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ error: "Error al obtener estadísticas de uniforme" });
+    }
+  },
 };
 
 module.exports = adminController;

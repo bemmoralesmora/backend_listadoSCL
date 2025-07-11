@@ -40,4 +40,20 @@ router.delete(
   profesoresController.deleteProfesor
 );
 
+router.get(
+  "/estadisticas/grados",
+  authMiddleware.isAdmin,
+  adminController.getEstadisticasGrados
+);
+router.get(
+  "/estadisticas/asistencia/:idGrado",
+  authMiddleware.isAdmin,
+  adminController.getEstadisticasAsistencia
+);
+router.get(
+  "/estadisticas/uniformes/:idGrado",
+  authMiddleware.isAdmin,
+  adminController.getEstadisticasUniforme
+);
+
 module.exports = router;
