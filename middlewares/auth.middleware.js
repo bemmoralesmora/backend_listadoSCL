@@ -107,13 +107,23 @@ const authMiddleware = {
   },
 
   isAdmin: (req, res, next) => {
-    if (!req.user || req.user.role !== "admin") {
+    // Verificar primero el objeto user
+    if (!req.user) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
+    // Verificar el rol
+    if (req.user.role !== "admin") {
+      console.error(
+        `Intento de acceso no autorizado. User ID: ${req.user.id}, Rol: ${req.user.role}`
+      );
       return res.status(403).json({
         success: false,
         message: "Acceso denegado. Se requieren privilegios de administrador.",
-        details: req.user
-          ? `Rol actual: ${req.user.role}`
-          : "Usuario no identificado",
+        userRole: req.user.role, // Para debugging
       });
     }
     next();
