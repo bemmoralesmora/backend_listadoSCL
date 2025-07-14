@@ -4,6 +4,7 @@ const allowedOrigins = [
   "http://localhost:5500",
   "https://bemmoralesmora.github.io",
   "https://bemmoralesmora.github.io/Listado_scl",
+  "https://listado-scl.vercel.app",
 ];
 
 const corsConfig = {
